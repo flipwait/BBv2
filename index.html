@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BetBetter V2</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bb: {
+              bg: '#070b12',
+              card: '#0d1420',
+              elevated: '#151d2c',
+              border: '#1c2739',
+              muted: '#8b95a8',
+              green: '#22c55e',
+              red: '#ef4444',
+              orange: '#f59e0b',
+              purple: '#a855f7',
+              blue: '#3b82f6'
+            }
+          },
+          fontFamily: {
+            display: ['ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background: radial-gradient(1200px 600px at 10% -10%, #1a0a2e55, transparent), radial-gradient(900px 500px at 100% 0%, #0a1f3d66, transparent), #070b12; }
+    .glass-card {
+      background: linear-gradient(145deg, rgba(20,28,42,0.92), rgba(12,18,28,0.88));
+      backdrop-filter: blur(12px);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 12px 40px rgba(0,0,0,0.35);
+    }
+    .glass-card:hover { box-shadow: 0 0 0 1px rgba(34,197,94,0.25), 0 16px 48px rgba(0,0,0,0.45); }
+    .sport-pill.active { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.5); color: #22c55e; }
+    .cat-chip.active { background: rgba(168,85,247,0.2); border-color: rgba(168,85,247,0.45); color: #e9d5ff; }
+    .live-dot { animation: pulse 1.4s ease infinite; }
+    @keyframes pulse { 50% { opacity: 0.4; } }
+    .score-ring {
+      background: conic-gradient(#22c55e var(--p), #1c2739 0);
+    }
+    .v2-rail { scrollbar-width: none; }
+    .v2-rail::-webkit-scrollbar { display: none; }
+  </style>
+</head>
+<body class="text-white font-display min-h-screen">
+  <!-- Top bar -->
+  <header class="sticky top-0 z-40 border-b border-white/5 bg-bb-bg/80 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center gap-3 justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-bb-green to-emerald-700 flex items-center justify-center font-bold text-bb-bg">B2</div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight">BetBetter <span class="text-bb-purple text-xs font-semibold">V2</span></h1>
+          <p class="text-[10px] text-bb-muted">Glass boards · deep props · same engines</p>
+        </div>
+      </div>
+      <nav class="flex flex-wrap gap-1 text-xs">
+        <button type="button" data-tab="scanner" class="tab-btn px-3 py-1.5 rounded-lg border border-bb-border text-bb-muted">Scanner</button>
+        <button type="button" data-tab="markets" class="tab-btn px-3 py-1.5 rounded-lg border border-bb-border text-bb-muted">Markets</button>
+        <button type="button" data-tab="portfolio" class="tab-btn px-3 py-1.5 rounded-lg border border-bb-border text-bb-muted">Portfolio</button>
+        <button type="button" data-tab="settings" class="tab-btn px-3 py-1.5 rounded-lg border border-bb-border text-bb-muted">Settings</button>
+      </nav>
+      <div class="flex items-center gap-2 text-xs">
+        <span id="auth-label" class="text-bb-muted">Guest</span>
+        <button type="button" onclick="openLogin()" class="px-2 py-1 rounded-lg border border-bb-border text-bb-muted">Login</button>
+        <button type="button" onclick="logout()" class="px-2 py-1 rounded-lg border border-bb-border text-bb-muted">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="max-w-7xl mx-auto px-4 py-4 flex gap-4">
+    <!-- Sport rail -->
+    <aside class="hidden md:flex flex-col gap-1 w-28 shrink-0 v2-rail max-h-[80vh] overflow-y-auto sticky top-20">
+      <p class="text-[10px] uppercase tracking-widest text-bb-muted mb-1 px-1">Sports</p>
+      <div id="sport-rail" class="flex flex-col gap-1"></div>
+    </aside>
+
+    <main class="flex-1 min-w-0 space-y-4">
+      <!-- Mobile sports -->
+      <div id="sport-rail-mobile" class="md:hidden flex gap-2 overflow-x-auto v2-rail pb-1"></div>
+
+      <!-- Mode + categories -->
+      <section class="glass-card rounded-2xl p-3 space-y-3">
+        <div class="flex flex-wrap items-center gap-2 justify-between">
+          <div class="flex gap-1 text-xs">
+            <button type="button" id="mode-live" class="mode-btn px-3 py-1.5 rounded-lg border border-bb-border">Live</button>
+            <button type="button" id="mode-upcoming" class="mode-btn px-3 py-1.5 rounded-lg border border-bb-border">Upcoming</button>
+            <button type="button" id="mode-all" class="mode-btn px-3 py-1.5 rounded-lg border border-bb-green/40 text-bb-green">All</button>
+          </div>
+          <div class="flex gap-2">
+            <button type="button" onclick="loadGames()" class="text-xs px-3 py-1.5 rounded-lg bg-bb-green/20 text-bb-green border border-bb-green/30">Refresh</button>
+            <button type="button" onclick="runSnapshot()" class="text-xs px-3 py-1.5 rounded-lg border border-bb-border text-bb-muted">LM snapshot</button>
+          </div>
+        </div>
+        <div id="cat-chips" class="flex flex-wrap gap-1.5"></div>
+        <div class="flex flex-wrap gap-2 text-[11px] text-bb-muted items-center">
+          <label>Min EV <input id="min-edge" type="number" value="0" step="0.5" class="w-14 bg-bb-bg border border-bb-border rounded px-1 py-0.5 text-white" /></label>
+          <label>Min score <input id="min-score" type="number" value="0" class="w-14 bg-bb-bg border border-bb-border rounded px-1 py-0.5 text-white" /></label>
+          <label>Rank
+            <select id="rank-filter" class="bg-bb-bg border border-bb-border rounded px-1 py-0.5 text-white">
+              <option value="all">All</option>
+              <option value="good">Good+</option>
+              <option value="elite">Elite</option>
+            </select>
+          </label>
+          <span id="summary-line" class="ml-auto text-bb-muted"></span>
+        </div>
+      </section>
+
+      <div id="learning-banner" class="hidden text-xs rounded-xl border border-bb-border bg-bb-card/60 p-3"></div>
+
+      <!-- Scanner -->
+      <section id="tab-scanner" class="tab-panel space-y-3">
+        <div id="games-list" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"></div>
+      </section>
+
+      <!-- Markets -->
+      <section id="tab-markets" class="tab-panel hidden space-y-3">
+        <div id="markets-list" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"></div>
+      </section>
+
+      <!-- Portfolio -->
+      <section id="tab-portfolio" class="tab-panel hidden space-y-3">
+        <div id="health-box" class="glass-card rounded-2xl p-4 text-sm"></div>
+        <div id="portfolio-box" class="glass-card rounded-2xl p-4 text-sm text-bb-muted">Sign in to track journal.</div>
+        <button type="button" onclick="renderPortfolio()" class="text-xs px-3 py-1.5 rounded-lg border border-bb-border">Refresh stats</button>
+      </section>
+
+      <!-- Settings -->
+      <section id="tab-settings" class="tab-panel hidden">
+        <div class="glass-card rounded-2xl p-4 space-y-3 text-sm max-w-xl">
+          <h2 class="font-semibold">Settings</h2>
+          <p class="text-xs text-bb-muted">V1 engines kept: EV · Matchup (ESPN) · Liq · Smart$ button · Deep Research · Live Focus · Journal · Worker hook</p>
+          <label class="block text-xs">OpenAI key<input id="openai-key" class="mt-1 w-full bg-bb-bg border border-bb-border rounded-lg px-3 py-2 font-mono text-xs" /></label>
+          <label class="block text-xs">Model<input id="openai-model" value="gpt-4o" class="mt-1 w-full bg-bb-bg border border-bb-border rounded-lg px-3 py-2 text-xs" /></label>
+          <label class="block text-xs">Discord webhook<input id="webhook-url" class="mt-1 w-full bg-bb-bg border border-bb-border rounded-lg px-3 py-2 font-mono text-xs" /></label>
+          <label class="block text-xs">Polymarket Key ID<input id="poly-key-id" class="mt-1 w-full bg-bb-bg border border-bb-border rounded-lg px-3 py-2 font-mono text-xs" /></label>
+          <label class="block text-xs">Polymarket Secret<input id="poly-secret" type="password" class="mt-1 w-full bg-bb-bg border border-bb-border rounded-lg px-3 py-2 font-mono text-xs" /></label>
+          <label class="block text-xs">Odds API key<input id="odds-api-key" class="mt-1 w-full bg-bb-bg border border-bb-border rounded-lg px-3 py-2 font-mono text-xs" /></label>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="saveSettings()" class="px-3 py-1.5 rounded-lg bg-bb-green/20 text-bb-green border border-bb-green/30 text-xs">Save</button>
+            <button type="button" onclick="runSnapshot()" class="px-3 py-1.5 rounded-lg border border-bb-border text-xs">Run LM snapshot</button>
+            <button type="button" onclick="testPolyKeys()" class="px-3 py-1.5 rounded-lg border border-bb-border text-xs">Test Poly keys</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Live Focus modal -->
+  <div id="focus-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="max-w-2xl mx-auto glass-card rounded-2xl p-4 my-8 relative">
+      <button type="button" onclick="closeFocus()" class="absolute top-3 right-3 text-bb-muted text-sm">Close</button>
+      <div id="focus-body"></div>
+    </div>
+  </div>
+
+  <!-- Login modal -->
+  <div id="login-modal" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl p-5 w-full max-w-sm space-y-3">
+      <h3 class="font-semibold">Login</h3>
+      <input id="login-user" placeholder="Username" class="w-full bg-bb-bg border border-bb-border rounded-lg px-3 py-2 text-sm" />
+      <button type="button" onclick="loginLocal()" class="w-full py-2 rounded-lg bg-bb-green/20 text-bb-green border border-bb-green/30 text-sm">Continue</button>
+      <button type="button" onclick="closeLogin()" class="w-full py-2 text-xs text-bb-muted">Cancel</button>
+    </div>
+  </div>
+
+<script>
+
+  /* ===== BetBetter V2 — C+D Multi-board + Glass ===== */
+  var V2_SPORTS = [
+    { id: 'nfl', label: 'NFL', deep: true, accent: '#013369' },
+    { id: 'mlb', label: 'MLB', deep: true, accent: '#C8102E' },
+    { id: 'cfb', label: 'CFB', deep: true, accent: '#9BF00B' },
+    { id: 'esports', label: 'Esports', deep: true, accent: '#a855f7' },
+    { id: 'nba', label: 'NBA', deep: false, accent: '#FDB927' },
+    { id: 'wnba', label: 'WNBA', deep: false, accent: '#FF6B35' },
+    { id: 'cbb', label: 'CBB', deep: false, accent: '#FF6B00' },
+    { id: 'ufc', label: 'UFC', deep: false, accent: '#D20A0A' },
+    { id: 'atp', label: 'ATP', deep: false, accent: '#00A3E0' },
+    { id: 'wta', label: 'WTA', deep: false, accent: '#7B2D8E' }
+  ];
+  var V2_CATS = {
+    nfl: [
+      { id: 'all', label: 'All' },
+      { id: 'game_lines', label: 'Game lines' },
+      { id: 'player_props', label: 'Player props' },
+      { id: 'game_props', label: 'Game props' },
+      { id: 'team_props', label: 'Team props' }
+    ],
+    mlb: [
+      { id: 'all', label: 'All' },
+      { id: 'game_lines', label: 'Game lines' },
+      { id: 'player_props', label: 'Player props' },
+      { id: 'innings', label: 'Innings / F5 / NRFI' },
+      { id: 'total', label: 'Totals' },
+      { id: 'spread', label: 'Spreads' }
+    ],
+    cfb: [
+      { id: 'all', label: 'All' },
+      { id: 'game_lines', label: 'Game lines' },
+      { id: 'player_props', label: 'Player props' },
+      { id: 'team_props', label: 'Team props' }
+    ],
+    esports: [
+      { id: 'all', label: 'All' },
+      { id: 'game_lines', label: 'Series / ML' },
+      { id: 'game_props', label: 'Map / game props' },
+      { id: 'player_props', label: 'Player props' }
+    ],
+    _default: [
+      { id: 'all', label: 'All' },
+      { id: 'moneyline', label: 'Moneyline' },
+      { id: 'spread', label: 'Spreads' },
+      { id: 'total', label: 'Totals' },
+      { id: 'prop', label: 'Props' }
+    ]
+  };
+  function v2CatsFor(sport) {
+    if (sport === 'lol' || sport === 'cs2' || sport === 'dota2' || sport === 'valorant' || sport === 'cod') return V2_CATS.esports;
+    return V2_CATS[sport] || V2_CATS._default;
+  }
+
+
+(function () {
+  var mode = 'all', league = '', marketType = 'all';
+
+  function $(id) { return document.getElementById(id); }
+  function rankClass(r) {
+    if (r === 'Elite') return 'rank-elite';
+    if (r === 'Good') return 'rank-good';
+    return 'rank-pass';
+  }
+  function scoreColor(s) {
+    if (s >= 80) return '#00d68f';
+    if (s >= 65) return '#3b82f6';
+    if (s >= 50) return '#f97316';
+    return '#8b95a8';
+  }
+
+  window.switchView = function (name) {
+    document.querySelectorAll('.view').forEach(function (v) { v.classList.remove('active'); });
+    var el = $('view-' + name);
+    if (el) el.classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(function (b) {
+      var on = b.getAttribute('data-view') === name;
+      b.classList.toggle('nav-active', on);
+      b.classList.toggle('nav-inactive', !on);
+    });
+    if (name === 'scanner' || name === 'markets') try { refreshLearning(); } catch (e) {}
+    loadGames();
+    if (name === 'portfolio') renderPortfolio();
+  };
+  document.querySelectorAll('.nav-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () { switchView(btn.getAttribute('data-view')); });
+  });
+
+  window.setMode = function (m) {
+    mode = m || 'all';
+    document.querySelectorAll('.mode-btn').forEach(function (b) {
+      b.className = 'mode-btn text-xs px-3 py-1.5 rounded-full ' + (b.getAttribute('data-mode') === mode ? 'filter-on' : 'filter-off');
+    });
+    loadGames();
+  };
+  window.setLeague = function (l) {
+    league = l || '';
+    document.querySelectorAll('.league-btn').forEach(function (b) {
+      b.className = 'league-btn text-xs px-3 py-1.5 rounded-full ' + ((b.getAttribute('data-league') || '') === league ? 'filter-on' : 'filter-off');
+    });
+    loadGames();
+  };
+  
+  window.marketsSetMode = function (m) {
+    mode = m || 'all';
+    document.querySelectorAll('.mode-btn-mkt').forEach(function (b) {
+      b.className = 'mode-btn-mkt text-xs px-3 py-1.5 rounded-full ' + (b.getAttribute('data-mode') === mode ? 'filter-on' : 'filter-off');
+    });
+    document.querySelectorAll('.mode-btn').forEach(function (b) {
+      b.className = 'mode-btn text-xs px-3 py-1.5 rounded-full ' + (b.getAttribute('data-mode') === mode ? 'filter-on' : 'filter-off');
+    });
+    loadGames();
+  };
+
+  window.setMarketType = function (t) {
+    marketType = t || 'all';
+    document.querySelectorAll('.mtype-btn').forEach(function (b) {
+      b.className = 'mtype-btn text-xs px-3 py-1.5 rounded-full ' + (b.getAttribute('data-mtype') === marketType ? 'filter-on' : 'filter-off');
+    });
+    loadGames();
+  };
+
+
+  function clientLmLabel(g) {
+    try {
+      var key = 'bb_lm_' + String(g.id || g.title || '');
+      var nowP = null;
+      if (g.impliedPct != null) nowP = Number(g.impliedPct) > 1 ? Number(g.impliedPct) / 100 : Number(g.impliedPct);
+      else if (g.sides && g.sides[0] && g.sides[0].pct != null) nowP = Number(g.sides[0].pct) / 100;
+      if (nowP == null || isNaN(nowP)) return (g.lmBadge && g.lmBadge.label) || 'LM: n/a';
+      var prev = null;
+      try { prev = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) {}
+      localStorage.setItem(key, JSON.stringify({ p: nowP, t: Date.now() }));
+      if (g.lmBadge && g.lmBadge.label && g.lmBadge.label.indexOf('n/a') < 0) return g.lmBadge.label;
+      if (!prev || prev.p == null) return 'LM: snapshot saved — refresh later';
+      var move = Math.round((nowP - prev.p) * 1000) / 10;
+      if (Math.abs(move) < 0.5) return 'LM: flat';
+      return move >= 0 ? ('LM: toward +' + move + 'pp') : ('LM: against ' + move + 'pp');
+    } catch (e) {
+      return (g.lmBadge && g.lmBadge.label) || 'LM: n/a';
+    }
+  }
+  function formBlock(g) {
+    var d = (g.matchupDetail) || (g.evaluate && g.evaluate.matchup && g.evaluate.matchup.detail) || '';
+    var lab = (g.evaluate && g.evaluate.matchup && g.evaluate.matchup.label) || '';
+    var sc = (g.matchupScore != null) ? g.matchupScore : (g.evaluate && g.evaluate.matchup && g.evaluate.matchup.score);
+    var lm = clientLmLabel(g);
+    var html = '<div class="rounded-xl border border-bb-border bg-bb-elevated/80 p-2.5 space-y-1 text-[11px]">';
+    html += '<div class="flex flex-wrap justify-between gap-2"><span class="text-bb-muted uppercase tracking-wider text-[10px]">Form / Matchup</span>';
+    html += '<span class="font-mono ' + (sc >= 60 ? 'text-bb-green' : sc <= 40 ? 'text-bb-red' : 'text-bb-muted') + '">' + (sc != null ? sc : '—') + (lab ? ' · ' + lab : '') + '</span></div>';
+    if (d) html += '<p class="text-bb-muted leading-snug">' + String(d).replace(/</g, '') + '</p>';
+    else html += '<p class="text-bb-muted">No ESPN form yet — refresh Scanner (MLB/NBA names work best)</p>';
+    html += '<p class="text-bb-orange font-medium">' + String(lm).replace(/</g, '') + '</p>';
+    html += '</div>';
+    return html;
+  }
+
+  function evalBars(ev) {
+    if (!ev) return '';
+    var rows = [
+      ['EV', ev.realEv && ev.realEv.score, ev.realEv && (ev.realEv.netEvPct != null ? 'net ' + ev.realEv.netEvPct + '%' : '')],
+      ['Matchup', ev.matchup && ev.matchup.score, ev.matchup && (ev.matchup.label || '')],
+      ['Liq', ev.liqVol && ev.liqVol.score, ev.liqVol && (ev.liqVol.label || '')]
+    ];
+    return '<div class="grid grid-cols-3 gap-1.5 text-[10px]">' + rows.map(function (r) {
+      var sc = r[1];
+      var main = sc != null ? sc : '—';
+      var col = sc != null ? scoreColor(sc) : '#8b95a8';
+      return '<div class="rounded-lg bg-bb-elevated p-1.5 text-center min-w-0">' +
+        '<div class="text-bb-muted truncate">' + r[0] + '</div>' +
+        '<div class="font-bold text-sm" style="color:' + col + '">' + main + '</div>' +
+        '<div class="text-bb-muted truncate text-[9px]">' + (r[2] || '') + '</div></div>';
+    }).join('') + '</div>';
+  }
+
+  function gameCard(g) {
+    var s0 = (g.sides && g.sides[0]) || { name: '—', pct: null, decimal: '—', display: '—' };
+    var s1 = (g.sides && g.sides[1]) || { name: '—', pct: null, decimal: '—', display: '—' };
+    var pct0 = s0.pct != null ? Math.min(100, s0.pct) : 50;
+    var status = g.live
+      ? '<span class="inline-flex items-center gap-1.5 text-xs text-bb-red"><span class="w-1.5 h-1.5 rounded-full bg-bb-red live-dot"></span>' +
+        (g.period || 'LIVE') + (g.score ? ' · ' + g.score : '') + '</span>'
+      : '<span class="text-xs text-bb-muted">' + (g.startTime ? new Date(g.startTime).toLocaleString() : 'Upcoming') + '</span>';
+    var pick = g.modelPick ? String(g.modelPick).replace(/</g, '') : '—';
+    var bs = g.betScore != null ? g.betScore : 0;
+    var edgeStr = (g.netEdge >= 0 ? '+' : '') + (g.netEdge != null ? g.netEdge : '—') + '%';
+    var edgeColor = g.netEdge >= 2 ? 'text-bb-green' : g.netEdge <= -2 ? 'text-bb-red' : 'text-bb-muted';
+    var title = String(g.title || '').replace(/</g, '');
+    var subtitle = g.eventTitle && g.eventTitle !== g.title ? String(g.eventTitle).replace(/</g, '') : '';
+    var liveBadges = (g.liveAnalysis && g.liveAnalysis.badges || []).slice(0, 3);
+
+    var props = g.props || [];
+    var propsHtml = '';
+    if (props.length) {
+      propsHtml = '<div class="pt-2 border-t border-bb-border space-y-1"><p class="text-[10px] uppercase text-bb-muted tracking-wider">Top props</p>' +
+        props.slice(0, 6).map(function (p) {
+          var q = String(p.question || '').replace(/</g, '');
+          if (q.length > 64) q = q.slice(0, 62) + '…';
+          return '<div class="flex justify-between gap-2 text-[11px]"><span class="text-bb-muted truncate">' + q + '</span>' +
+            '<span class="shrink-0"><span class="' + rankClass(p.rank) + ' text-[9px] font-bold px-1 rounded">' + String(p.rank || '').toUpperCase() +
+            '</span> <span class="font-mono">' + (p.betScore || 0) + '</span></span></div>';
+        }).join('') + '</div>';
+    }
+
+    var best = g.bestProp
+      ? '<div class="text-xs text-bb-muted">Best prop: <span class="text-white">' + String(g.bestProp.question || '').replace(/</g, '').slice(0, 50) +
+        '</span> · score ' + (g.bestProp.betScore || 0) + '</div>'
+      : '';
+
+    return '<article class="v2-card glass-card rounded-2xl border border-white/10 bg-bb-card/80 p-4 space-y-3">' +
+      '<div class="flex items-start justify-between gap-2">' +
+        '<div class="min-w-0"><h3 class="font-semibold text-[15px] leading-snug">' + title + '</h3>' +
+        (subtitle ? '<p class="text-[11px] text-bb-muted mt-0.5">' + subtitle + (g.marketType ? ' · ' + g.marketType.toUpperCase() : '') + '</p>' : '') +
+        '<div class="mt-1 flex flex-wrap items-center gap-2">' + status + liveBadges.map(function(b){ return '<span class="text-[9px] px-1.5 py-0.5 rounded bg-bb-elevated text-bb-muted">' + b + '</span>'; }).join('') +
+        '<span class="text-xs text-bb-muted">· ' + String(g.league || '').toUpperCase() + '</span></div></div>' +
+        '<div class="flex flex-col items-end gap-1 shrink-0">' +
+          '<div class="score-ring" style="border-color:' + scoreColor(bs) + ';color:' + scoreColor(bs) + '">' + bs + '</div>' +
+          '<span class="' + rankClass(g.rank) + ' text-[10px] font-bold px-2 py-0.5 rounded-md">' + String(g.rank || 'PASS').toUpperCase() + '</span>' +
+        '</div></div>' +
+
+      '<div class="rounded-lg bg-bb-elevated px-3 py-2 text-sm space-y-1">' +
+        '<div><span class="text-bb-muted text-xs">Model pick</span> <span class="font-semibold text-bb-green">' + pick + '</span>' +
+        (g.priceDisplay ? ' <span class="font-mono text-white text-xs">' + g.priceDisplay + '</span>' : '') + '</div>' +
+        '<div class="text-xs text-bb-muted">Implied (market) <span class="text-white font-mono">' + (g.impliedPct != null ? g.impliedPct + '%' : '—') +
+        '</span> · Model fair <span class="text-white font-mono">' + (g.modelFairPct != null ? g.modelFairPct + '%' : '—') +
+        '</span> · EV <span class="font-mono ' + edgeColor + '">' + edgeStr + '</span></div>' +
+        '<div class="text-xs text-bb-muted">MC / books: <span class="text-white">' + (g.mcLine || 'Add Odds API key for consensus') + '</span></div>' +
+        best +
+      '</div>' +
+
+      evalBars(g.evaluate) + formBlock(g) +
+
+      '<div class="space-y-2">' +
+        '<div class="flex justify-between text-sm gap-2"><span class="font-medium truncate">' + String(s0.name || '').replace(/</g, '') +
+        '</span><span class="text-xs text-bb-muted shrink-0">' + (s0.display || s0.decimal || '') +
+        ' <strong class="text-white text-sm">' + (s0.pct != null ? s0.pct + '%' : '—') + '</strong></span></div>' +
+        '<div class="h-1.5 rounded-full bg-bb-elevated overflow-hidden"><div class="h-full bar-yes rounded-full" style="width:' + pct0 + '%"></div></div>' +
+        '<div class="flex justify-between text-sm gap-2"><span class="font-medium truncate">' + String(s1.name || '').replace(/</g, '') +
+        '</span><span class="text-xs text-bb-muted shrink-0">' + (s1.display || s1.decimal || '') +
+        ' <strong class="text-white text-sm">' + (s1.pct != null ? s1.pct + '%' : '—') + '</strong></span></div>' +
+      '</div>' +
+
+      propsHtml +
+
+      '<div class="flex flex-wrap gap-2 pt-1 border-t border-bb-border">' +
+        '<button type="button" class="focus-btn text-xs px-2.5 py-1 rounded-lg border border-bb-orange/40 text-bb-orange">Live Focus</button>' +'<button type="button" class="smart-btn text-xs px-2.5 py-1 rounded-lg border border-bb-green/40 text-bb-green">Smart$</button>' +'<button type="button" class="deep-btn text-xs px-2.5 py-1 rounded-lg border border-bb-purple/40 text-bb-purple">Deep Research</button>' +
+        '<button type="button" class="discord-btn text-xs px-2.5 py-1 rounded-lg bg-[#5865F2]/20 text-[#5865F2] border border-[#5865F2]/30">Send Discord</button>' +
+        '<button type="button" class="log-bet-btn text-xs px-2.5 py-1 rounded-lg border border-bb-border text-bb-muted">Log bet</button>' +
+        '<a href="' + (g.url || 'https://polymarket.us') + '" target="_blank" rel="noopener" class="text-xs px-2.5 py-1 rounded-lg bg-bb-green/15 text-bb-green border border-bb-green/30">Trade</a>' +
+      '</div>' +
+      '<div class="deep-panel hidden text-xs text-bb-muted bg-bb-elevated rounded-lg p-3 whitespace-pre-wrap"></div>' +
+      '</article>';
+  }
+
+  function bindCardActions(games) {
+    var cards = document.querySelectorAll('#games-list article, #markets-list article');
+    cards.forEach(function (card, i) {
+      var g = games[i % games.length];
+      // map carefully: both lists same html order
+    });
+    // Re-query within each list separately
+    ['games-list', 'markets-list'].forEach(function (listId) {
+      var list = $(listId);
+      if (!list) return;
+      var articles = list.querySelectorAll('article');
+      articles.forEach(function (card, idx) {
+        var g = games[idx];
+        if (!g) return;
+        var deep = card.querySelector('.deep-btn');
+        var disc = card.querySelector('.discord-btn');
+        var logb = card.querySelector('.log-bet-btn');
+        var foc = card.querySelector('.focus-btn');
+        if (foc) foc.onclick = function () { openFocus(g); };
+        var sm = card.querySelector('.smart-btn');
+        if (sm) sm.onclick = function () { runSmartCheck(card, g); };
+        if (deep) deep.onclick = function () { runDeep(card, g); };
+        if (disc) disc.onclick = function () { sendDiscord(g); };
+        if (logb) logb.onclick = function () {
+          (function(){ var st = prompt('Wager amount ($)?', '10'); if (st === null) return; logBet({ title: g.title, pick: g.modelPick, edge: g.netEdge, rank: g.rank, league: g.league, entryPrice: (g.sides && g.sides[0] && g.sides[0].pct) || g.impliedPct || 0, stake: Number(st)||1, marketType: g.marketType }); })();
+        };
+      });
+    });
+  }
+
+  window.saveAutoDiscord = function () {
+    localStorage.setItem('betbetter_auto_discord_elite', ($('auto-discord-elite') && $('auto-discord-elite').checked) ? '1' : '0');
+  };
+  var _lastElite = {};
+  function maybeAutoDiscord(games) {
+    try {
+      if (localStorage.getItem('betbetter_auto_discord_elite') !== '1') return;
+      var settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}');
+      if (!settings.webhook) return;
+      (games || []).forEach(function (g) {
+        if (g.rank !== 'Elite') return;
+        var key = String(g.id || g.title);
+        if (_lastElite[key]) return;
+        _lastElite[key] = Date.now();
+        sendDiscord(g, true);
+      });
+    } catch (e) {}
+  }
+
+  function sendDiscord(g, silent) {
+    var settings = {};
+    try { settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+    if (!settings.webhook) {
+      if (!silent) alert('Add Discord webhook in Settings');
+      return;
+    }
+    var content = '**' + (g.rank || '') + '** · score ' + (g.betScore || 0) + '/100\n' +
+      (g.title || '') + '\nPick: **' + (g.modelPick || '') + '** · EV/edge ' + g.netEdge + '% · conf ' + g.confidence +
+      '\n' + (g.url || '');
+    fetch('/api/discord-alert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ webhookUrl: settings.webhook, content: content })
+    }).then(function (r) {
+      if (!silent) alert(r.ok ? 'Sent to Discord' : 'Discord send failed');
+    }).catch(function () { if (!silent) alert('Discord send failed'); });
+  }
+
+  async function runDeep(card, g) {
+    var panel = card.querySelector('.deep-panel');
+    if (!panel) return;
+    panel.classList.remove('hidden');
+    panel.textContent = 'Running Deep Research (matchup, form, 5 sims)…';
+    var settings = {};
+    try { settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+    var context = {
+      title: g.title,
+      league: g.league,
+      live: g.live,
+      period: g.period,
+      score: g.score,
+      startTime: g.startTime,
+      modelPick: g.modelPick,
+      betScore: g.betScore,
+      rank: g.rank,
+      netEdge: g.netEdge,
+      ev: g.ev,
+      evaluate: g.evaluate,
+      sides: g.sides,
+      bestProp: g.bestProp,
+    };
+    var prompt = 'Deep-analyze this Polymarket US sports bet. Factor how the game is played, time/score if live, and give TAKE or PASS with 5 mini-simulations.';
+    try {
+      var content = null;
+      try {
+        var r = await fetch('/api/deep-research', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: prompt, context: context, model: settings.openaiModel || 'gpt-4o' })
+        });
+        if (r.ok) content = (await r.json()).content;
+      } catch (e1) {}
+      if (!content && settings.openaiKey) {
+        var r2 = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + settings.openaiKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: settings.openaiModel || 'gpt-4o',
+            messages: [
+              { role: 'system', content: 'Sports betting analyst. Sections: VERDICT, MATCHUP, FORM/H2H, KEY DATA, FIVE MINI-SIMULATIONS, RISKS, FINAL PICK.' },
+              { role: 'user', content: prompt + '\n' + JSON.stringify(context) }
+            ],
+            temperature: 0.35
+          })
+        });
+        if (r2.ok) {
+          var d = await r2.json();
+          content = d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content;
+        }
+      }
+      panel.textContent = content || 'Set OPENAI_API_KEY on Vercel or paste key in Settings.';
+    } catch (e) {
+      panel.textContent = e.message || String(e);
+    }
+  }
+
+  
+  async function fetchOddsBoard() {
+    var strip = $('odds-strip');
+    if (!strip) return;
+    var settings = {};
+    try { settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+    if (!settings.oddsApiKey && !window.__oddsEnvHint) {
+      strip.innerHTML = 'Sportsbook odds: add free key in Settings (the-odds-api.com) or ODDS_API_KEY on Vercel.';
+      return;
+    }
+    strip.textContent = 'Loading sportsbook odds…';
+    try {
+      var q = '/api/odds?league=' + encodeURIComponent(league || 'mlb');
+      if (settings.oddsApiKey) q += '&apiKey=' + encodeURIComponent(settings.oddsApiKey);
+      var r = await fetch(q);
+      var data = await r.json();
+      if (!data.ok) {
+        strip.innerHTML = 'Odds: ' + (data.error || 'failed');
+        return;
+      }
+      var lines = (data.games || []).slice(0, 6).map(function (g) {
+        var sample = (g.h2hSample || []).slice(0, 4).map(function (o) {
+          return o.name + ' ' + o.price;
+        }).join(' · ');
+        return '<div class="rounded-lg border border-bb-border bg-bb-card px-3 py-2 mb-1"><span class="text-white">' +
+          String(g.away || '').replace(/</g,'') + ' @ ' + String(g.home || '').replace(/</g,'') +
+          '</span><div class="text-bb-muted mt-0.5">' + (sample || (g.bookmakers + ' books')) + '</div></div>';
+      }).join('');
+      window.__oddsCache = data.games || [];
+      // re-render cards with MC if list already drawn
+      strip.innerHTML = '<p class="mb-2 text-bb-muted">Sportsbook feedback (' + data.sportKey + ')' +
+        (data.remaining != null ? ' · API left ' + data.remaining : '') + '</p>' + (lines || 'No games returned');
+    } catch (e) {
+      strip.textContent = 'Odds load error: ' + (e.message || e);
+    }
+  }
+
+  
+  
+  function normName(s) {
+    return String(s || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]/g, ' ')
+      .replace(/\b(the|at|vs|and)\b/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+  function tokens(s) {
+    return normName(s).split(' ').filter(function (t) { return t.length > 2; });
+  }
+  function namesMatch(title, home, away) {
+    var t = normName(title);
+    var ht = tokens(home);
+    var at = tokens(away);
+    if (!ht.length || !at.length) return false;
+    var homeHit = ht.some(function (w) { return t.indexOf(w) >= 0; });
+    var awayHit = at.some(function (w) { return t.indexOf(w) >= 0; });
+    return homeHit && awayHit;
+  }
+  function matchOddsToGame(g, oddsGames) {
+    var title = (g.eventTitle || g.title || '');
+    for (var i = 0; i < (oddsGames || []).length; i++) {
+      var o = oddsGames[i];
+      if (!namesMatch(title, o.home, o.away)) continue;
+      var cons = o.consensus || [];
+      if (cons.length) {
+        var line = cons.map(function (c) {
+          return c.name + ' ' + (c.avgAmerican > 0 ? '+' : '') + c.avgAmerican +
+            (c.impliedPct != null ? ' (' + c.impliedPct + '%)' : '');
+        }).join(' · ');
+        var soft = (o.quality && o.quality.softLabel) ? ' · ' + o.quality.softLabel : '';
+        return {
+          line: line + ' · ' + (o.bookmakers || 0) + ' books' + soft,
+          short: (o.bookmakers || 0) + 'bks',
+          consensus: cons
+        };
+      }
+      var sample = (o.h2hSample || []).slice(0, 4).map(function (x) {
+        return x.name + ' ' + x.price;
+      }).join(', ');
+      return { line: sample || ((o.bookmakers || 0) + ' books'), short: (o.bookmakers || 0) + 'bks' };
+    }
+    return null;
+  }
+
+  async function fetchOddsForLeague(lg) {
+    var settings = {};
+    try { settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+    var key = settings.oddsApiKey || '';
+    var q = '/api/odds?league=' + encodeURIComponent(lg || 'mlb');
+    if (key) q += '&apiKey=' + encodeURIComponent(key);
+    var r = await fetch(q);
+    var data = await r.json();
+    if (!data.ok) throw new Error(data.error || 'Odds failed');
+    return data;
+  }
+
+    
+  
+  function priceSnapKey() { return 'betbetter_price_snap_v1'; }
+  function loadPriceSnaps() {
+    try { return JSON.parse(localStorage.getItem(priceSnapKey()) || '{}'); } catch (e) { return {}; }
+  }
+  function savePriceSnaps(map) {
+    try { localStorage.setItem(priceSnapKey(), JSON.stringify(map)); } catch (e) {}
+  }
+  /** Apply client LM using last refresh prices */
+  function applyClientLineMove(games) {
+    var snaps = loadPriceSnaps();
+    var next = {};
+    var now = Date.now();
+    (games || []).forEach(function (g) {
+      var id = String(g.id || g.title || '');
+      var px = null;
+      if (g.sides && g.sides[0] && g.sides[0].price != null) px = Number(g.sides[0].price);
+      else if (g.impliedPct != null) px = Number(g.impliedPct) / 100;
+      if (px == null || !id) return;
+      next[id] = { p: px, t: now };
+      var prev = snaps[id];
+      if (!g.evaluate) g.evaluate = {};
+      if (!g.evaluate.lineMove) g.evaluate.lineMove = { name: 'Line Move', score: 50, label: '—' };
+      if (prev && prev.p != null && Math.abs(prev.p - px) >= 0) {
+        var rawMove = Math.round((px - prev.p) * 1000) / 10;
+        var side = (g.evaluate.winProbEdge && g.modelPick) ? 'pick' : 'YES';
+        // if model pick is second side, flip
+        var pickIsSide0 = true;
+        if (g.sides && g.sides[1] && g.modelPick && String(g.modelPick) === String(g.sides[1].name)) pickIsSide0 = false;
+        var movePp = pickIsSide0 ? rawMove : -rawMove;
+        var score = 48;
+        if (Math.abs(movePp) < 0.4) { score = 48; g.evaluate.lineMove.label = 'Flat'; }
+        else if (movePp >= 1) { score = Math.min(95, 55 + movePp * 6); g.evaluate.lineMove.label = 'Toward +' + movePp + 'pp'; }
+        else { score = Math.max(8, 48 + movePp * 6); g.evaluate.lineMove.label = 'Against ' + movePp + 'pp'; }
+        g.evaluate.lineMove.movePp = movePp;
+        g.evaluate.lineMove.score = Math.round(score);
+        g.evaluate.lineMove.priorPrice = prev.p;
+        g.evaluate.lineMove.currentPrice = px;
+      } else {
+        g.evaluate.lineMove.label = g.evaluate.lineMove.label || 'Snap saved — refresh for LM';
+      }
+    });
+    // merge snaps (keep old 6h)
+    Object.keys(snaps).forEach(function (k) {
+      if (!next[k] && snaps[k].t && now - snaps[k].t < 6 * 3600 * 1000) next[k] = snaps[k];
+    });
+    savePriceSnaps(next);
+    try {
+      var payload = {};
+      Object.keys(next).forEach(function (k) { payload[k] = next[k].p; });
+      fetch('/api/prices', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ snaps: payload }) }).catch(function(){});
+    } catch (e) {}
+  }
+
+
+  window.loadGames = async function () {
+    var list = $('games-list');
+    var list2 = $('markets-list');
+    var meta = $('meta-line');
+    if (list) list.innerHTML = '<p class="text-sm text-bb-muted">Loading…</p>';
+    try {
+      var minEdge = ($('filter-edge') && $('filter-edge').value) || '0';
+      var minScore = ($('filter-score') && $('filter-score').value) || '0';
+      var rankF = ($('filter-rank') && $('filter-rank').value) || '';
+      var q = '/api/games?mode=' + encodeURIComponent(mode) +
+        '&marketType=' + encodeURIComponent(marketType) +
+        '&minEdge=' + encodeURIComponent(minEdge) +
+        '&minScore=' + encodeURIComponent(minScore);
+      if (rankF) q += '&rank=' + encodeURIComponent(rankF);
+      if (league) q += '&league=' + encodeURIComponent(league);
+      var r = await fetch(q);
+      var data = await r.json();
+      if (!data.ok) throw new Error(data.error || 'API error');
+      var games = data.games || [];
+      var mmeta = $('markets-meta');
+      var meta2 = $('markets-meta');
+      if (meta) {
+        meta.textContent = (data.summary.live || 0) + ' live · ' + (data.summary.upcoming || 0) +
+          ' upcoming · Elite ' + (data.summary.elite || 0) + ' · Good ' + (data.summary.good || 0) +
+          ' · scan ' + marketType;
+        if (mmeta) mmeta.textContent = meta.textContent;
+      }
+      var html = games.length ? games.map(gameCard).join('') : '<p class="text-sm text-bb-muted">No games for this scan.</p>';
+      if (list) list.innerHTML = html;
+      if (list2) list2.innerHTML = html;
+      bindCardActions(games);
+      
+      // Odds first (await) so MC can attach to cards
+      try {
+        var settingsO = {};
+        try { settingsO = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+        if (settingsO.oddsApiKey) {
+          var od = await fetchOddsBoard();
+          if (od && od.games) window.__oddsCache = od.games;
+        } else if ($('odds-strip')) {
+          $('odds-strip').innerHTML = 'Sportsbook MC: add Odds API key in Settings → Save.';
+        }
+      } catch (oe) {
+        console.warn(oe);
+      }
+      if (window.__oddsCache && window.__oddsCache.length) {
+        games.forEach(function (g) {
+          var mc = matchOddsToGame(g, window.__oddsCache);
+          if (mc) { g.mcLine = mc.line; g.mcShort = mc.short; }
+        });
+      }
+      maybeAutoDiscord(games);
+    } catch (e) {
+      var err = '<p class="text-sm text-bb-red">' + (e.message || e) + '</p><p class="text-xs text-bb-muted">Check /api/health on your Vercel URL.</p>';
+      if (list) list.innerHTML = err;
+      if (list2) list2.innerHTML = err;
+    }
+  };
+
+  /* Auth + journal */
+  function session() { try { return JSON.parse(localStorage.getItem('betbetter_session') || 'null'); } catch (e) { return null; } }
+  function updateAuth() {
+    var s = session();
+    if ($('auth-label')) $('auth-label').textContent = s ? s.username : 'Guest';
+    if ($('btn-login')) $('btn-login').classList.toggle('hidden', !!s);
+    if ($('btn-logout')) $('btn-logout').classList.toggle('hidden', !s);
+  }
+  window.openLogin = function () { var m = $('login-modal'); if (m) { m.classList.remove('hidden'); m.classList.add('flex'); } };
+  
+  
+  // ——— Journal learning 71–80 + health 100 + digest 97 ———
+  function getBets() {
+    try { return JSON.parse(localStorage.getItem('betbetter_bets') || '[]'); } catch (e) { return []; }
+  }
+  function saveBets(bets) {
+    localStorage.setItem('betbetter_bets', JSON.stringify(bets));
+  }
+  function analyzeJournalLocal(bets) {
+    var list = (bets || []).filter(function (b) { return b.settled; });
+    var open = (bets || []).filter(function (b) { return !b.settled; });
+    function bucket(keyFn) {
+      var map = {};
+      list.forEach(function (b) {
+        var k = keyFn(b) || 'unknown';
+        if (!map[k]) map[k] = { n: 0, wins: 0, pnl: 0, clvSum: 0, clvN: 0 };
+        map[k].n += 1;
+        if (b.won) map[k].wins += 1;
+        var stake = Number(b.stake) || 1;
+        var entry = Number(b.entryPrice) || 50;
+        var e = entry > 1 ? entry / 100 : entry;
+        if (b.won) map[k].pnl += stake * (1 / Math.max(0.05, e) - 1);
+        else map[k].pnl -= stake;
+        if (b.closePrice != null && b.entryPrice != null) {
+          var c = Number(b.closePrice);
+          var cc = c > 1 ? c / 100 : c;
+          map[k].clvSum += (e - cc) * 100;
+          map[k].clvN += 1;
+        }
+      });
+      Object.keys(map).forEach(function (k) {
+        var m = map[k];
+        m.hitRate = m.n ? Math.round((m.wins / m.n) * 1000) / 10 : null;
+        m.avgClv = m.clvN ? Math.round((m.clvSum / m.clvN) * 10) / 10 : null;
+        m.pnl = Math.round(m.pnl * 100) / 100;
+      });
+      return map;
+    }
+    var byRank = bucket(function (b) { return b.rank || 'Pass'; });
+    var byLeague = bucket(function (b) { return (b.league || 'na').toLowerCase(); });
+    var byProp = bucket(function (b) { return b.marketType || 'moneyline'; });
+    var byLm = bucket(function (b) { return b.lmDir || 'unknown'; });
+    var byLiq = bucket(function (b) { return b.liqBucket || 'unknown'; });
+    var eliteThreshold = 78;
+    var elite = byRank.Elite;
+    if (elite && elite.n >= 8 && elite.hitRate != null && elite.hitRate < 52) eliteThreshold = 85;
+    else if (elite && elite.n >= 5 && elite.hitRate != null && elite.hitRate < 48) eliteThreshold = 88;
+    else if (elite && elite.n >= 10 && elite.hitRate != null && elite.hitRate >= 58) eliteThreshold = 74;
+    var killTags = [];
+    Object.keys(byProp).forEach(function (k) {
+      var m = byProp[k];
+      if (m.n >= 6 && m.hitRate != null && m.hitRate < 42) killTags.push(k);
+    });
+    Object.keys(byLeague).forEach(function (k) {
+      var m = byLeague[k];
+      if (m.n >= 8 && m.hitRate != null && m.hitRate < 40) killTags.push('league:' + k);
+    });
+    var recent = list.slice(-5);
+    var losses = 0;
+    for (var i = recent.length - 1; i >= 0; i--) {
+      if (recent[i].won) break;
+      losses++;
+    }
+    var tilt = losses >= 4;
+    var wins = list.filter(function (b) { return b.won; }).length;
+    var clvAll = 0, clvN = 0;
+    list.forEach(function (b) {
+      if (b.closePrice == null || b.entryPrice == null) return;
+      var e = Number(b.entryPrice); var c = Number(b.closePrice);
+      var ee = e > 1 ? e / 100 : e; var cc = c > 1 ? c / 100 : c;
+      clvAll += (ee - cc) * 100; clvN++;
+    });
+    return {
+      settled: list.length,
+      open: open.length,
+      hitRate: list.length ? Math.round((wins / list.length) * 1000) / 10 : null,
+      byRank: byRank,
+      byLeague: byLeague,
+      byProp: byProp,
+      byLm: byLm,
+      byLiq: byLiq,
+      eliteThreshold: eliteThreshold,
+      killTags: killTags,
+      tilt: tilt,
+      consecutiveLosses: losses,
+      avgClv: clvN ? Math.round((clvAll / clvN) * 10) / 10 : null,
+      clvSamples: clvN
+    };
+  }
+  window.__learning = null;
+  function refreshLearning() {
+    window.__learning = analyzeJournalLocal(getBets());
+    return window.__learning;
+  }
+  function liqBucket(liq) {
+    var n = Number(liq) || 0;
+    if (n >= 20000) return 'deep';
+    if (n >= 5000) return 'ok';
+    if (n >= 1000) return 'thin';
+    return 'very-thin';
+  }
+  function lmDirFromGame(g) {
+    var lm = g.evaluate && g.evaluate.lineMove;
+    if (!lm || lm.movePp == null) return 'unknown';
+    if (Math.abs(lm.movePp) < 0.4) return 'flat';
+    return lm.movePp > 0 ? 'with' : 'against';
+  }
+  window.logBet = function (payload) {
+    var bets = getBets();
+    bets.unshift({
+      id: 'b' + Date.now(),
+      title: payload.title,
+      pick: payload.pick,
+      edge: payload.edge,
+      rank: payload.rank,
+      league: payload.league,
+      marketType: payload.marketType || 'moneyline',
+      entryPrice: payload.entryPrice,
+      closePrice: null,
+      lmDir: payload.lmDir || 'unknown',
+      liqBucket: payload.liqBucket || 'unknown',
+      conf: payload.conf || 50,
+      stake: Number(payload.stake) || 1,
+      settled: false,
+      won: null,
+      at: new Date().toISOString()
+    });
+    saveBets(bets);
+    refreshLearning();
+    alert('Logged. Settle later for learning/CLV. Suggested units may update.');
+  };
+  window.settleBet = function (id, won) {
+    var bets = getBets();
+    var sid = String(id);
+    var b = bets.find(function (x) { return String(x.id) === sid; });
+    if (!b) { alert('Bet not found'); return; }
+    b.settled = true;
+    b.won = !!won;
+    var close = prompt('Optional close price (¢ or 0-1) for CLV — leave blank to skip', b.entryPrice != null ? b.entryPrice : '');
+    if (close != null && String(close).trim() !== '') b.closePrice = Number(close);
+    saveBets(bets);
+    refreshLearning();
+    renderPortfolio();
+  };
+  function fmtBucket(map) {
+    return Object.keys(map || {}).map(function (k) {
+      var m = map[k];
+      return '<div class="flex justify-between gap-2 text-xs border-b border-bb-border py-1"><span class="text-bb-muted">' + k +
+        '</span><span class="font-mono">' + m.n + 'b · hit ' + (m.hitRate != null ? m.hitRate + '%' : '—') +
+        ' · CLV ' + (m.avgClv != null ? m.avgClv : '—') + '</span></div>';
+    }).join('') || '<p class="text-xs text-bb-muted">No settled data</p>';
+  }
+  window.renderPortfolio = function () {
+    var L = refreshLearning();
+    var box = $('portfolio-box');
+    var health = $('health-box');
+    var banner = $('learning-banner');
+    if (banner) {
+      banner.classList.remove('hidden');
+      var parts = [];
+      parts.push('Elite threshold now <strong>' + L.eliteThreshold + '</strong> (auto from journal)');
+      if (L.tilt) parts.push('<span class="text-bb-red">Tilt lock: ' + L.consecutiveLosses + ' losses — size down</span>');
+      if (L.killTags.length) parts.push('Kill tags: ' + L.killTags.join(', '));
+      if (L.avgClv != null) parts.push('Avg CLV ' + L.avgClv + 'pp (n=' + L.clvSamples + ')');
+      banner.innerHTML = parts.join('<br/>');
+    }
+    if (health) {
+      health.innerHTML =
+        '<p class="text-[10px] uppercase text-bb-muted">Model health (100)</p>' +
+        '<p class="text-sm">Settled <strong>' + L.settled + '</strong> · Open <strong>' + L.open +
+        '</strong> · Hit rate <strong>' + (L.hitRate != null ? L.hitRate + '%' : '—') + '</strong></p>' +
+        '<div class="grid sm:grid-cols-2 gap-3 mt-2">' +
+        '<div><p class="text-xs text-bb-muted mb-1">By rank (71)</p>' + fmtBucket(L.byRank) + '</div>' +
+        '<div><p class="text-xs text-bb-muted mb-1">By league (72)</p>' + fmtBucket(L.byLeague) + '</div>' +
+        '<div><p class="text-xs text-bb-muted mb-1">By market type (73)</p>' + fmtBucket(L.byProp) + '</div>' +
+        '<div><p class="text-xs text-bb-muted mb-1">By LM dir (74)</p>' + fmtBucket(L.byLm) + '</div>' +
+        '<div><p class="text-xs text-bb-muted mb-1">By liquidity (75)</p>' + fmtBucket(L.byLiq) + '</div></div>';
+    }
+    if (!box) return;
+    var session = null;
+    try { session = JSON.parse(localStorage.getItem('betbetter_session') || 'null'); } catch (e) {}
+    var bets = getBets();
+    if (!session) {
+      box.innerHTML = 'Sign in to personalize. Journal still saves on this device.';
+    }
+    var rows = bets.slice(0, 40).map(function (b) {
+      return '<div class="flex flex-wrap items-center justify-between gap-2 py-2 border-b border-bb-border text-xs">' +
+        '<div class="min-w-0"><p class="text-white truncate">' + String(b.title || '').replace(/</g, '') +
+        '</p><p class="text-bb-muted">' + String(b.pick || '') + ' · ' + (b.rank || '') + ' · ' + (b.marketType || '') +
+        ' · $' + (b.stake != null ? b.stake : 1) + ' · entry ' + (b.entryPrice != null ? b.entryPrice : '—') +
+        (b.settled ? (b.won ? ' · WON' : ' · LOST') : '') +
+        (b.closePrice != null ? ' · close ' + b.closePrice : '') + '</p></div>' +
+        (!b.settled
+          ? '<span class="shrink-0"><button type="button" class="text-bb-green mr-2" onclick="settleBet(\'' + b.id + '\',true)">Won</button>' +
+            '<button type="button" class="text-bb-red" onclick="settleBet(\'' + b.id + '\',false)">Lost</button></span>'
+          : '<span class="text-bb-muted shrink-0">settled</span>') +
+        '</div>';
+    }).join('');
+    var openStake = bets.filter(function(b){return !b.settled;}).reduce(function(s,b){return s+(Number(b.stake)||0);},0);
+    var settledList = bets.filter(function(b){return b.settled;});
+    var pnl = 0;
+    settledList.forEach(function(b){
+      var stake = Number(b.stake)||1;
+      var entry = Number(b.entryPrice)||50;
+      var e = entry > 1 ? entry/100 : entry;
+      if (b.won) pnl += stake * (1/Math.max(0.05,e) - 1);
+      else pnl -= stake;
+    });
+    var moneyLine = '<p class="text-xs mb-3 text-bb-muted">Open $' + openStake.toFixed(2) + ' · Settled PnL ~$' + (Math.round(pnl*100)/100) + '</p>';
+    box.innerHTML = moneyLine + (session ? '<p class="text-xs text-bb-muted mb-2">Signed in as ' + String(session.user || session.username || 'user').replace(/</g, '') + '</p>' : '') +
+      (rows || '<p class="text-bb-muted">No bets logged yet.</p>');
+  };
+  window.exportJournal = function () {
+    var data = JSON.stringify({ bets: getBets(), learning: refreshLearning() }, null, 2);
+    var a = document.createElement('a');
+    a.href = 'data:application/json,' + encodeURIComponent(data);
+    a.download = 'betbetter-journal.json';
+    a.click();
+  };
+  window.sendDigest = async function () {
+    var settings = {};
+    try { settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+    var L = refreshLearning();
+    var games = window.__lastGames || [];
+    var elite = games.filter(function (g) { return g.rank === 'Elite'; }).slice(0, 5);
+    var live = games.filter(function (g) { return g.live; }).slice(0, 5);
+    var lines = ['**BetBetter digest**', 'Journal: ' + L.settled + ' settled · hit ' + (L.hitRate != null ? L.hitRate + '%' : '—') + ' · Elite≥' + L.eliteThreshold];
+    if (L.tilt) lines.push('Tilt lock on');
+    if (L.killTags.length) lines.push('Kill tags: ' + L.killTags.join(', '));
+    lines.push('', '**Elite**');
+    elite.forEach(function (g) { lines.push('• ' + g.title + ' → ' + g.modelPick + ' · ' + g.betScore); });
+    lines.push('', '**Live**');
+    live.forEach(function (g) { lines.push('• ' + g.title + ' ' + (g.period || '') + ' ' + (g.score || '')); });
+    var text = lines.join('\n');
+    try {
+      var r = await fetch('/api/digest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text, webhook: settings.webhook || '' })
+      });
+      var data = await r.json();
+      if (data.sent) alert('Digest sent to Discord');
+      else {
+        prompt('Copy digest (no webhook or send failed):', text);
+      }
+    } catch (e) {
+      prompt('Copy digest:', text);
+    }
+  };
+  /** Apply learning overlays to games before render */
+  function applyLearningToGames(games) {
+    var L = window.__learning || refreshLearning();
+    (games || []).forEach(function (g) {
+      // 76 threshold
+      if (g.rank === 'Elite' && (g.betScore || 0) < L.eliteThreshold) {
+        g.rank = 'Good';
+        g._rankNote = 'Elite raised to ' + L.eliteThreshold;
+      }
+      // 77 kill tags
+      var mt = g.marketType || g.scanType || '';
+      if (L.killTags.indexOf(mt) >= 0 || L.killTags.indexOf('league:' + (g.league || '')) >= 0) {
+        g._kill = true;
+        if (g.rank === 'Elite') g.rank = 'Good';
+      }
+      // 79 unit
+      var conf = g.confidence || 50;
+      var u = 1;
+      if (conf >= 70) u = 1.25;
+      if (conf < 45) u = 0.5;
+      if (g._kill) u = 0.25;
+      if (L.tilt) u = Math.min(u, 0.5);
+      g.suggestedUnit = u;
+    });
+  }
+
+
+  window.__lastGames = [];
+  window.closeFocus = function () {
+    var p = $('focus-panel');
+    if (p) { p.classList.add('hidden'); p.classList.remove('flex'); }
+  };
+  
+  async function runSmartCheck(card, g) {
+    var panel = card.querySelector('.smart-panel');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.className = 'smart-panel text-xs text-bb-muted bg-bb-elevated rounded-lg p-3 mt-2 space-y-1';
+      card.appendChild(panel);
+    }
+    panel.textContent = 'Checking book / flow…';
+    var slug = g.slug || g.marketSlug || '';
+    if (!slug && g.url) {
+      var parts = String(g.url).split('/').filter(Boolean);
+      slug = parts[parts.length - 1] || '';
+      if (slug === 'event' || slug === 'market') slug = parts[parts.length - 2] || slug;
+    }
+    if (!slug && g.eventTitle) slug = String(g.eventTitle).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+    try {
+      var q = '/api/smart-money?status=1';
+      if (slug) q = '/api/smart-money?slug=' + encodeURIComponent(slug) + '&id=' + encodeURIComponent(g.id || '');
+      var r = await fetch(q);
+      var d = await r.json();
+      if (!d.ok && !slug) {
+        panel.innerHTML = '<p class="text-bb-muted">Smart$ confirmation</p><p>' + (d.note || 'Open a market with slug for book check') + '</p><p>Keys on server: ' + (d.keysConfigured ? 'yes' : 'no') + '</p>';
+        return;
+      }
+      if (!d.ok) {
+        panel.innerHTML = '<span class="text-bb-red">' + (d.error || 'Smart$ failed') + '</span>';
+        return;
+      }
+      var lean = d.lean || 'mixed';
+      var verd = lean === 'mixed' ? 'MIXED' : 'SEE LEAN';
+      if (g.modelPick && d.imbalancePct != null) {
+        // rough: positive imbalance = bid/yes pressure
+        verd = Math.abs(d.imbalancePct) < 8 ? 'MIXED' : (d.imbalancePct > 0 ? 'BID PRESSURE' : 'ASK PRESSURE');
+      }
+      panel.innerHTML = '<p class="text-white font-medium">Smart$ confirmation · ' + verd + '</p>' +
+        '<p>Imbalance ' + (d.imbalancePct != null ? d.imbalancePct + '%' : '—') + ' · lean ' + lean + ' · strength ' + (d.strength != null ? d.strength + '/5' : '—') + '</p>' +
+        '<p>' + (d.tags || []).join(' · ') + '</p>' +
+        (d.lm && d.lm.m15 ? '<p>LM 15m: ' + JSON.stringify(d.lm.m15.movePp) + 'pp</p>' : '') +
+        '<p class="text-[10px]">' + (d.note || 'Book-based · tape worker later') + '</p>';
+    } catch (e) {
+      panel.textContent = e.message || String(e);
+    }
+  }
+
+
+  window.openFocus = function (g) {
+    if (!g) return;
+    var p = $('focus-panel');
+    if (!p) return;
+    p.classList.remove('hidden');
+    p.classList.add('flex');
+    $('focus-title').textContent = g.eventTitle || g.title || 'Game';
+    var la = g.liveAnalysis || {};
+    var phase = (la.phase && la.phase.phaseLabel) || (g.live ? (g.period || 'Live') : 'Pre-game');
+    $('focus-sub').textContent = String(g.league || '').toUpperCase() + ' · ' + phase +
+      (g.score ? ' · ' + g.score : '') + (g.live ? ' · LIVE' : '');
+
+    var related = (window.__lastGames || []).filter(function (x) {
+      if (g.eventTitle) return (x.eventTitle || x.title) === g.eventTitle || x.id === g.id;
+      return (x.title === g.title) || (x.eventTitle && g.title && x.eventTitle.indexOf(g.title.split(' vs')[0]) >= 0);
+    }).slice(0, 12);
+
+    if (!related.length) related = [g];
+
+    var tips = (la.tips || []).map(function (t) {
+      return '<li class="text-bb-muted text-xs mb-1">' + String(t).replace(/</g, '') + '</li>';
+    }).join('');
+
+    var badges = (la.badges || []).map(function (b) {
+      return '<span class="text-[10px] px-2 py-0.5 rounded-full bg-bb-elevated border border-bb-border">' + b + '</span>';
+    }).join(' ');
+
+    var smTags = (g.evaluate && g.evaluate.smartMoney && g.evaluate.smartMoney.tags || []).map(function (t) {
+      return '<span class="text-[10px] text-bb-muted">#' + t + '</span>';
+    }).join(' ');
+
+    var marketsHtml = related.map(function (m) {
+      var edge = (m.netEdge >= 0 ? '+' : '') + (m.netEdge != null ? m.netEdge : '—');
+      return '<div class="rounded-xl border border-bb-border bg-bb-card p-3 space-y-1">' +
+        '<div class="flex justify-between gap-2"><p class="text-xs font-medium leading-snug">' + String(m.title || '').replace(/</g, '') +
+        '</p><span class="' + rankClass(m.rank) + ' text-[9px] font-bold px-1.5 py-0.5 rounded h-fit">' + String(m.rank || '').toUpperCase() + '</span></div>' +
+        '<p class="text-[11px] text-bb-muted">Pick <span class="text-bb-green">' + String(m.modelPick || '—').replace(/</g, '') +
+        '</span> · score ' + (m.betScore || 0) + ' · EV ' + edge + '%' +
+        (m.priceDisplay ? ' · ' + m.priceDisplay : '') + '</p>' +
+        '<p class="text-[11px] text-bb-muted">Implied ' + (m.impliedPct != null ? m.impliedPct + '%' : '—') +
+        ' · Fair ' + (m.modelFairPct != null ? m.modelFairPct + '%' : '—') + '</p>' +
+        '<a class="text-[11px] text-bb-green" target="_blank" rel="noopener" href="' + (m.url || 'https://polymarket.us') + '">Trade</a></div>';
+    }).join('');
+
+    $('focus-body').innerHTML =
+      '<div class="flex flex-wrap gap-1.5">' + (badges || '<span class="text-xs text-bb-muted">No live badges</span>') + '</div>' +
+      (la.trapRisk ? '<p class="text-xs text-bb-red font-medium">Late / high-price trap risk — tiny upside.</p>' : '') +
+      (la.liqCrush ? '<p class="text-xs text-bb-orange font-medium">Thin live liquidity — hard to fill.</p>' : '') +
+      '<div class="rounded-xl bg-bb-card border border-bb-border p-3">' +
+        '<p class="text-[10px] uppercase text-bb-muted mb-1">Live read (41–48)</p>' +
+        '<ul class="list-disc pl-4">' + (tips || '<li class="text-xs text-bb-muted">No tips</li>') + '</ul></div>' +
+      '<div class="rounded-xl bg-bb-card border border-bb-border p-3">' +
+        '<p class="text-[10px] uppercase text-bb-muted mb-1">This market</p>' +
+        '<p class="text-sm">Model pick <span class="text-bb-green font-semibold">' + String(g.modelPick || '—').replace(/</g, '') + '</span>' +
+        ' · score <span class="font-mono">' + (g.betScore || 0) + '</span></p>' +
+        evalBars(g.evaluate) + formBlock(g) +
+        (smTags ? '<p class="mt-2 text-[11px]">Smart$ tags: ' + smTags + '</p>' : '') +
+      '</div>' +
+      '<div><p class="text-[10px] uppercase text-bb-muted mb-2">Related markets (this game)</p>' +
+        '<div class="space-y-2">' + marketsHtml + '</div></div>' +
+      '<div class="flex flex-wrap gap-2">' +
+        '<button type="button" class="text-xs px-3 py-1.5 rounded-lg border border-bb-purple/40 text-bb-purple" id="focus-deep">Deep Research</button>' +
+        '<button type="button" class="text-xs px-3 py-1.5 rounded-lg bg-[#5865F2]/20 text-[#5865F2]" id="focus-discord">Send Discord</button>' +
+        '<button type="button" class="text-xs px-3 py-1.5 rounded-lg border border-bb-border text-bb-muted" id="focus-log">Log bet</button></div>';
+
+    var db = $('focus-deep');
+    if (db) db.onclick = function () {
+      runDeep({ querySelector: function () { return $('focus-body'); }, closest: function(){return null;} }, g);
+      // simpler: alert research into a panel at bottom
+      var el = document.createElement('div');
+      el.className = 'deep-panel text-xs text-bb-muted bg-bb-elevated rounded-lg p-3 mt-2';
+      el.textContent = 'Running…';
+      $('focus-body').appendChild(el);
+      // call API
+      (async function () {
+        var settings = {};
+        try { settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+        var context = { title: g.title, eventTitle: g.eventTitle, league: g.league, live: g.live, period: g.period, score: g.score, liveAnalysis: g.liveAnalysis, modelPick: g.modelPick, betScore: g.betScore, evaluate: g.evaluate, rank: g.rank, netEdge: g.netEdge, lmBadge: g.lmBadge, impliedPct: g.impliedPct, modelFairPct: g.modelFairPct, liquidity: g.liquidity, volume: g.volume, marketType: g.marketType, sides: g.sides };
+        try {
+          var r = await fetch('/api/deep-research', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: 'Live focus analysis. Use score, phase, trap risk.', context: context, model: settings.openaiModel || 'gpt-4o' }) });
+          if (r.ok) { var d = await r.json(); el.textContent = d.content || 'No content'; }
+          else el.textContent = 'Add OPENAI_API_KEY or key in Settings';
+        } catch (e) { el.textContent = e.message || String(e); }
+      })();
+    };
+    var dc = $('focus-discord');
+    if (dc) dc.onclick = function () { sendDiscord(g); };
+    var lg = $('focus-log');
+    if (lg) lg.onclick = function () {
+      (function(){
+          var st = prompt('Wager amount ($)?', '10');
+          if (st === null) return;
+          logBet({ title: g.title, pick: g.modelPick, edge: g.netEdge, rank: g.rank, league: g.league, entryPrice: g.impliedPct || 0, marketType: g.marketType || g.scanType || marketType, lmDir: lmDirFromGame(g), liqBucket: liqBucket(g.liquidity), conf: g.confidence, stake: Number(st) || 1 });
+        })();
+    };
+  };
+
+
+  window.closeLogin = function () { var m = $('login-modal'); if (m) { m.classList.add('hidden'); m.classList.remove('flex'); } };
+  window.doSignup = function () {
+    var u = (($('login-user') || {}).value || '').trim();
+    var p = ($('login-pass') || {}).value || '';
+    if (u.length < 2 || p.length < 4) return alert('Username 2+, password 4+');
+    var users = {};
+    try { users = JSON.parse(localStorage.getItem('betbetter_users') || '{}'); } catch (e) {}
+    if (users[u]) return alert('Username taken');
+    users[u] = { password: p };
+    localStorage.setItem('betbetter_users', JSON.stringify(users));
+    localStorage.setItem('betbetter_session', JSON.stringify({ username: u, at: Date.now() }));
+    closeLogin(); updateAuth(); renderPortfolio();
+  };
+  window.doLogin = function () {
+    var u = (($('login-user') || {}).value || '').trim();
+    var p = ($('login-pass') || {}).value || '';
+    var users = {};
+    try { users = JSON.parse(localStorage.getItem('betbetter_users') || '{}'); } catch (e) {}
+    if (!users[u] || users[u].password !== p) return alert('Wrong credentials');
+    localStorage.setItem('betbetter_session', JSON.stringify({ username: u, at: Date.now() }));
+    closeLogin(); updateAuth(); renderPortfolio();
+  };
+  window.logout = function () { localStorage.removeItem('betbetter_session'); updateAuth(); renderPortfolio(); };
+
+  window.saveSettings = function () {
+    localStorage.setItem('betbetter_settings', JSON.stringify({
+      openaiKey: ($('openai-key') || {}).value || '',
+      openaiModel: ($('openai-model') || {}).value || 'gpt-4o',
+      webhook: ($('webhook-url') || {}).value || '',
+      polyKeyId: ($('poly-key-id') || {}).value || '',
+      polySecret: ($('poly-secret') || {}).value || '',
+      oddsApiKey: ($('odds-api-key') || {}).value || ''
+    }));
+    alert('Saved');
+  };
+
+  
+  window.testPolyKeys = async function () {
+    var settings = {};
+    try { settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+    var q = '/api/poly-test?keyId=' + encodeURIComponent(settings.polyKeyId || '') +
+      '&secret=' + encodeURIComponent(settings.polySecret || '');
+    try {
+      var r = await fetch(q);
+      var d = await r.json();
+      alert(d.ok ? ('OK: ' + d.message) : ('Fail: ' + (d.error || r.status)));
+    } catch (e) { alert(String(e.message || e)); }
+  };
+  window.runSnapshot = async function () {
+    try {
+      var r = await fetch('/api/cron/snapshot');
+      var d = await r.json();
+      alert(d.ok ? ('Snapshot OK: ' + d.snapped + ' prices · tracked ' + d.marketsTracked) : ('Fail: ' + (d.error || r.status)));
+    } catch (e) { alert(String(e.message || e)); }
+  };
+
+  window.testOdds = async function () {
+    var settings = {};
+    try { settings = JSON.parse(localStorage.getItem('betbetter_settings') || '{}'); } catch (e) {}
+    var key = settings.oddsApiKey || '';
+    var q = '/api/odds?league=' + (league || 'mlb');
+    if (key) q += '&apiKey=' + encodeURIComponent(key);
+    try {
+      var r = await fetch(q);
+      var data = await r.json();
+      if (!data.ok) return alert('Odds error: ' + (data.error || r.status));
+      alert('Odds OK · ' + data.count + ' games · sport ' + data.sportKey + (data.remaining != null ? ' · remaining ' + data.remaining : ''));
+    } catch (e) {
+      alert('Odds test failed: ' + (e.message || e));
+    }
+  };
+
+
+  document.addEventListener('DOMContentLoaded', function () {
+    if (location.search.indexOf('auth=discord') >= 0) history.replaceState({}, '', '/');
+    try {
+      var st = JSON.parse(localStorage.getItem('betbetter_settings') || '{}');
+      if ($('openai-key') && st.openaiKey) $('openai-key').value = st.openaiKey;
+      if ($('openai-model') && st.openaiModel) $('openai-model').value = st.openaiModel;
+      if ($('webhook-url') && st.webhook) $('webhook-url').value = st.webhook;
+      if ($('poly-key-id') && st.polyKeyId) $('poly-key-id').value = st.polyKeyId;
+      if ($('poly-secret') && st.polySecret) $('poly-secret').value = st.polySecret;
+      if ($('odds-api-key') && st.oddsApiKey) $('odds-api-key').value = st.oddsApiKey;
+    } catch (e) {}
+    if ($('auto-discord-elite')) $('auto-discord-elite').checked = localStorage.getItem('betbetter_auto_discord_elite') === '1';
+    updateAuth();
+    renderPortfolio();
+    loadGames();
+    setInterval(loadGames, 60000);
+  });
+})();
+
+
+  /* V2 UI wiring */
+  var currentSport = 'mlb';
+  var currentCat = 'all';
+  var currentMode = 'all';
+
+  function paintSports() {
+    var html = V2_SPORTS.map(function (s) {
+      return '<button type="button" data-sport="' + s.id + '" class="sport-pill text-left px-2 py-2 rounded-xl border border-bb-border text-xs text-bb-muted hover:text-white ' +
+        (s.id === currentSport ? 'active' : '') + '">' + s.label + (s.deep ? ' <span class="text-bb-purple">•</span>' : '') + '</button>';
+    }).join('');
+    var rail = document.getElementById('sport-rail');
+    var mob = document.getElementById('sport-rail-mobile');
+    if (rail) rail.innerHTML = html;
+    if (mob) mob.innerHTML = V2_SPORTS.map(function (s) {
+      return '<button type="button" data-sport="' + s.id + '" class="sport-pill shrink-0 px-3 py-1.5 rounded-full border border-bb-border text-xs ' + (s.id === currentSport ? 'active' : 'text-bb-muted') + '">' + s.label + '</button>';
+    }).join('');
+    document.querySelectorAll('[data-sport]').forEach(function (btn) {
+      btn.onclick = function () {
+        currentSport = btn.getAttribute('data-sport');
+        currentCat = 'all';
+        paintSports();
+        paintCats();
+        if (typeof league !== 'undefined') league = currentSport === 'esports' ? 'lol' : currentSport;
+        loadGames();
+      };
+    });
+  }
+  function paintCats() {
+    var cats = v2CatsFor(currentSport);
+    var box = document.getElementById('cat-chips');
+    if (!box) return;
+    box.innerHTML = cats.map(function (c) {
+      return '<button type="button" data-cat="' + c.id + '" class="cat-chip px-2.5 py-1 rounded-full border border-bb-border text-[11px] text-bb-muted ' +
+        (c.id === currentCat ? 'active' : '') + '">' + c.label + '</button>';
+    }).join('');
+    box.querySelectorAll('[data-cat]').forEach(function (btn) {
+      btn.onclick = function () {
+        currentCat = btn.getAttribute('data-cat');
+        paintCats();
+        if (typeof marketType !== 'undefined') marketType = currentCat;
+        loadGames();
+      };
+    });
+  }
+  function wireModes() {
+    [['mode-live','live'],['mode-upcoming','upcoming'],['mode-all','all']].forEach(function (x) {
+      var el = document.getElementById(x[0]);
+      if (!el) return;
+      el.onclick = function () {
+        currentMode = x[1];
+        if (typeof mode !== 'undefined') mode = currentMode;
+        document.querySelectorAll('.mode-btn').forEach(function (b) {
+          b.classList.remove('border-bb-green/40', 'text-bb-green');
+        });
+        el.classList.add('border-bb-green/40', 'text-bb-green');
+        loadGames();
+      };
+    });
+  }
+
+  // Hook loadGames league/marketType if globals exist
+  var _origLoad = typeof loadGames === 'function' ? loadGames : null;
+  if (_origLoad) {
+    window.loadGames = async function () {
+      try {
+        if (typeof league !== 'undefined') league = currentSport === 'esports' ? 'lol' : currentSport;
+        if (typeof marketType !== 'undefined') marketType = currentCat || 'all';
+        if (typeof mode !== 'undefined') mode = currentMode || 'all';
+      } catch (e) {}
+      return _origLoad.apply(this, arguments);
+    };
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(function (btn) {
+    btn.onclick = function () {
+      var name = btn.getAttribute('data-tab');
+      document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.add('hidden'); });
+      var panel = document.getElementById('tab-' + name);
+      if (panel) panel.classList.remove('hidden');
+      document.querySelectorAll('.tab-btn').forEach(function (b) {
+        b.classList.remove('border-bb-green/40', 'text-bb-green');
+      });
+      btn.classList.add('border-bb-green/40', 'text-bb-green');
+      if (name === 'portfolio' && typeof renderPortfolio === 'function') renderPortfolio();
+      if (name === 'markets' && typeof loadGames === 'function') loadGames();
+    };
+  });
+
+  paintSports();
+  paintCats();
+  wireModes();
+  if (typeof updateAuth === 'function') updateAuth();
+  if (typeof loadSettings === 'function') loadSettings();
+  // auto load
+  setTimeout(function () { if (typeof loadGames === 'function') loadGames(); }, 200);
+</script>
+</body>
+</html>
