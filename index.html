@@ -176,6 +176,7 @@
 
   /* ===== BetBetter V2 — C+D Multi-board + Glass ===== */
   var V2_SPORTS = [
+    { id: 'all', label: 'All', deep: false, accent: '#22c55e' },
     { id: 'nfl', label: 'NFL', deep: true, accent: '#013369' },
     { id: 'mlb', label: 'MLB', deep: true, accent: '#C8102E' },
     { id: 'cfb', label: 'CFB', deep: true, accent: '#9BF00B' },
@@ -713,9 +714,10 @@
     var meta = $('meta-line');
     if (list) list.innerHTML = '<p class="text-sm text-bb-muted">Loading…</p>';
     try {
-      var minEdge = ($('filter-edge') && $('filter-edge').value) || '0';
-      var minScore = ($('filter-score') && $('filter-score').value) || '0';
-      var rankF = ($('filter-rank') && $('filter-rank').value) || '';
+      var minEdge = ($('min-edge') && $('min-edge').value) || ($('filter-edge') && $('filter-edge').value) || '0';
+      var minScore = ($('min-score') && $('min-score').value) || ($('filter-score') && $('filter-score').value) || '0';
+      var rankF = ($('rank-filter') && $('rank-filter').value) || ($('filter-rank') && $('filter-rank').value) || '';
+      if (rankF === 'all') rankF = '';
       var q = '/api/games?mode=' + encodeURIComponent(mode) +
         '&marketType=' + encodeURIComponent(marketType) +
         '&minEdge=' + encodeURIComponent(minEdge) +
@@ -737,6 +739,9 @@
       var html = games.length ? games.map(gameCard).join('') : '<p class="text-sm text-bb-muted">No games for this scan.</p>';
       if (list) list.innerHTML = html;
       if (list2) list2.innerHTML = html;
+      window.__lastGames = games;
+      var sum = $('summary-line');
+      if (sum && data.summary) sum.textContent = (data.summary.live||0) + ' live · ' + (data.summary.upcoming||0) + ' up · E' + (data.summary.elite||0);
       bindCardActions(games);
       
       // Odds first (await) so MC can attach to cards
@@ -1054,7 +1059,7 @@
 
   window.__lastGames = [];
   window.closeFocus = function () {
-    var p = $('focus-panel');
+    var p = $('focus-modal') || $('focus-panel');
     if (p) { p.classList.add('hidden'); p.classList.remove('flex'); }
   };
   
@@ -1106,14 +1111,16 @@
 
   window.openFocus = function (g) {
     if (!g) return;
-    var p = $('focus-panel');
-    if (!p) return;
+    var p = $('focus-modal') || $('focus-panel');
+    if (!p) { alert('Live Focus UI missing'); return; }
     p.classList.remove('hidden');
-    p.classList.add('flex');
-    $('focus-title').textContent = g.eventTitle || g.title || 'Game';
+    if (!p.classList.contains('flex')) p.classList.add('flex');
     var la = g.liveAnalysis || {};
     var phase = (la.phase && la.phase.phaseLabel) || (g.live ? (g.period || 'Live') : 'Pre-game');
-    $('focus-sub').textContent = String(g.league || '').toUpperCase() + ' · ' + phase +
+    var titleEl = $('focus-title');
+    var subEl = $('focus-sub');
+    if (titleEl) titleEl.textContent = g.eventTitle || g.title || 'Game';
+    if (subEl) subEl.textContent = String(g.league || '').toUpperCase() + ' · ' + phase +
       (g.score ? ' · ' + g.score : '') + (g.live ? ' · LIVE' : '');
 
     var related = (window.__lastGames || []).filter(function (x) {
@@ -1252,9 +1259,16 @@
   };
   window.runSnapshot = async function () {
     try {
-      var r = await fetch('/api/cron/snapshot');
-      var d = await r.json();
+      var r = await fetch('/api/snapshot');
+      if (!r.ok) r = await fetch('/api/cron/snapshot');
+      var text = await r.text();
+      var d;
+      try { d = JSON.parse(text); } catch (err) {
+        alert('LM snapshot got non-JSON (deploy /api/snapshot). Status ' + r.status);
+        return;
+      }
       alert(d.ok ? ('Snapshot OK: ' + d.snapped + ' prices · tracked ' + d.marketsTracked) : ('Fail: ' + (d.error || r.status)));
+      if (typeof loadGames === 'function') loadGames();
     } catch (e) { alert(String(e.message || e)); }
   };
 
@@ -1296,7 +1310,8 @@
 
 
   /* V2 UI wiring */
-  var currentSport = 'mlb';
+  var currentSport = 'all';
+  var league = '';
   var currentCat = 'all';
   var currentMode = 'all';
 
@@ -1317,7 +1332,7 @@
         currentCat = 'all';
         paintSports();
         paintCats();
-        if (typeof league !== 'undefined') league = currentSport === 'esports' ? 'lol' : currentSport;
+        if (typeof league !== 'undefined') league = currentSport === 'all' ? '' : (currentSport === 'esports' ? 'lol' : currentSport);
         loadGames();
       };
     });
@@ -1360,7 +1375,7 @@
   if (_origLoad) {
     window.loadGames = async function () {
       try {
-        if (typeof league !== 'undefined') league = currentSport === 'esports' ? 'lol' : currentSport;
+        if (typeof league !== 'undefined') league = currentSport === 'all' ? '' : (currentSport === 'esports' ? 'lol' : currentSport);
         if (typeof marketType !== 'undefined') marketType = currentCat || 'all';
         if (typeof mode !== 'undefined') mode = currentMode || 'all';
       } catch (e) {}
